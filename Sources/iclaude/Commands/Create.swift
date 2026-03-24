@@ -1,7 +1,7 @@
 import ArgumentParser
 import Foundation
 
-struct Add: AsyncParsableCommand {
+struct Create: AsyncParsableCommand {
 
     static let configuration = CommandConfiguration(
         abstract: "Create a new reminder."

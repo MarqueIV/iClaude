@@ -10,29 +10,31 @@ Built with native Apple frameworks (EventKit, etc.) for fast, direct access — 
 
 Full CRUD access to Apple Reminders via EventKit.
 
-**List operations:**
+**Read operations:**
 
 ```bash
-iclaude reminders lists                    # all lists
-iclaude reminders list "Shopping"          # reminders in a list
+iclaude reminders list                    # all lists
+iclaude reminders list "Shopping"         # reminders in a specific list
+iclaude reminders list --all              # all reminders across all lists
+iclaude reminders show <id>              # single reminder by ID
 ```
 
-**Reminder operations (ID-first):**
+**Write operations (ID-first):**
 
 All mutating commands take a reminder ID as the primary identifier. Alternatively, use `--current-title` (with optional `--list`) to find by name. When multiple reminders match a title, the response includes all matches with their IDs for disambiguation.
 
 ```bash
 # Create
-iclaude reminders add --new-title "Buy milk" --list "Shopping"
-iclaude reminders add --new-title "Call dentist" --list "Reminders" --due 2026-04-01 --priority 1
+iclaude reminders create --new-title "Buy milk" --list "Shopping"
+iclaude reminders create --new-title "Call dentist" --list "Reminders" --due 2026-04-01 --priority 1
+
+# Update (by ID or title)
+iclaude reminders update 3E7C1731-AC9C-4064-B9BD-E4E41E63A479 --new-title "Buy oat milk"
+iclaude reminders update --current-title "Buy milk" --list "Shopping" --new-title "Buy oat milk"
 
 # Complete (by ID or title)
 iclaude reminders complete 3E7C1731-AC9C-4064-B9BD-E4E41E63A479
 iclaude reminders complete --current-title "Buy milk" --list "Shopping"
-
-# Edit (by ID or title)
-iclaude reminders edit 3E7C1731-... --new-title "Buy oat milk" --priority 5
-iclaude reminders edit --current-title "Buy milk" --list "Shopping" --new-title "Buy oat milk"
 
 # Delete (by ID or title)
 iclaude reminders delete 3E7C1731-AC9C-4064-B9BD-E4E41E63A479
@@ -51,11 +53,11 @@ JSON by default. Add `--pretty` for pretty-printed JSON.
 
 ```bash
 # Compact (default — for AI agents)
-iclaude reminders lists
+iclaude reminders list
 # [{"name":"Reminders","id":"3E7C1731-...","color":"#5856D6"}]
 
 # Pretty-printed (for humans)
-iclaude reminders lists --pretty
+iclaude reminders list --pretty
 ```
 
 **Disambiguation** — when `--current-title` matches multiple reminders:
@@ -92,7 +94,7 @@ iClaude uses EventKit which requires Reminders access. On first run, macOS will 
 If running from an Electron-based editor (VS Code, Cursor), macOS may silently deny the permission. Use [`selfauth`](https://github.com/MarqueIV/selfauth) to fix this:
 
 ```bash
-selfauth iclaude reminders lists
+selfauth iclaude reminders list
 ```
 
 ## Requirements

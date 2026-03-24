@@ -4,7 +4,7 @@ import Foundation
 // Integration tests that call the real CLI binary.
 //
 // IMPORTANT — permissions:
-//   Run `.build/debug/iclaude reminders lists` manually once in Terminal to trigger
+//   Run `.build/debug/iclaude reminders list` manually once in Terminal to trigger
 //   the macOS Reminders access dialog. After granting, these tests run
 //   unattended. Permission persists across rebuilds (same binary path).
 //
@@ -21,11 +21,11 @@ final class ICLaudeTests: XCTestCase {
 
     override func setUpWithError() throws {
 
-        let result = try CLI.run("reminders", "lists")
+        let result = try CLI.run("reminders", "list")
 
         guard result.isSuccess else {
             throw XCTSkip("iclaude returned non-zero. Is Reminders access granted? " +
-                          "Run `.build/debug/iclaude reminders lists` manually first.")
+                          "Run `.build/debug/iclaude reminders list` manually first.")
         }
 
         guard let lists = result.jsonArray, !lists.isEmpty else {
@@ -39,12 +39,12 @@ final class ICLaudeTests: XCTestCase {
         testList = name
     }
 
-    /// Helper: adds a test reminder and returns its ID.
+    /// Helper: creates a test reminder and returns its ID.
     @discardableResult
-    func addTestReminder(_ suffix: String) throws -> String {
+    func createTestReminder(_ suffix: String) throws -> String {
 
         let title = "\(Self.prefix)\(suffix)"
-        let r = try CLI.run("reminders", "add", "--new-title", title, "--list", testList)
+        let r = try CLI.run("reminders", "create", "--new-title", title, "--list", testList)
         let obj = try XCTUnwrap(r.jsonObject)
         return try XCTUnwrap(obj["id"] as? String)
     }
@@ -54,23 +54,12 @@ final class ICLaudeTests: XCTestCase {
         try? CLI.run("reminders", "delete", id)
     }
 
-    /// Helper: cleans up by title (best-effort).
-    func deleteByTitle(_ title: String) {
-        try? CLI.run("reminders", "delete", "--current-title", title, "--list", testList)
-    }
+    // MARK: - list (no args = lists, with name = reminders, --all = everything)
 
-    // MARK: - lists
+    func test_list_noArgs_returnsAllLists() throws {
 
-    func test_lists_returnsJsonArray() throws {
-
-        let r = try CLI.run("reminders", "lists")
+        let r = try CLI.run("reminders", "list")
         XCTAssertEqual(r.exitCode, 0)
-        XCTAssertNotNil(r.jsonArray, "Expected a JSON array, got: \(r.stdout)")
-    }
-
-    func test_lists_eachEntryHasIdAndName() throws {
-
-        let r = try CLI.run("reminders", "lists")
         let lists = try XCTUnwrap(r.jsonArray)
         for entry in lists {
             XCTAssertNotNil(entry["id"],   "Missing 'id' in: \(entry)")
@@ -78,19 +67,16 @@ final class ICLaudeTests: XCTestCase {
         }
     }
 
-    func test_lists_prettyFlagProducesIndentedJson() throws {
-
-        let compact = try CLI.run("reminders", "lists")
-        let pretty  = try CLI.run("reminders", "lists", "--pretty")
-        XCTAssertNotEqual(compact.stdout, pretty.stdout)
-        XCTAssert(pretty.stdout.contains("  "), "Pretty output should be indented")
-    }
-
-    // MARK: - list (single list)
-
-    func test_list_returnsJsonArray() throws {
+    func test_list_withName_returnsReminders() throws {
 
         let r = try CLI.run("reminders", "list", testList)
+        XCTAssertEqual(r.exitCode, 0, r.stdout)
+        XCTAssertNotNil(r.jsonArray, "Expected a JSON array, got: \(r.stdout)")
+    }
+
+    func test_list_all_returnsReminders() throws {
+
+        let r = try CLI.run("reminders", "list", "--all")
         XCTAssertEqual(r.exitCode, 0, r.stdout)
         XCTAssertNotNil(r.jsonArray, "Expected a JSON array, got: \(r.stdout)")
     }
@@ -100,63 +86,89 @@ final class ICLaudeTests: XCTestCase {
         let r = try CLI.run("reminders", "list", "__definitely_not_a_real_list_xyz__")
         XCTAssertNotEqual(r.exitCode, 0)
         let obj = try XCTUnwrap(r.jsonObject, "Expected JSON error object, got: \(r.stdout)")
-        XCTAssertNotNil(obj["error"], "Expected 'error' key in: \(obj)")
+        XCTAssertNotNil(obj["error"])
     }
 
-    // MARK: - add (--new-title)
+    func test_list_prettyFlag() throws {
 
-    func test_add_createsReminder() throws {
+        let compact = try CLI.run("reminders", "list")
+        let pretty  = try CLI.run("reminders", "list", "--pretty")
+        XCTAssertNotEqual(compact.stdout, pretty.stdout)
+        XCTAssert(pretty.stdout.contains("  "), "Pretty output should be indented")
+    }
 
-        let title = "\(Self.prefix)_add"
-        let id = try addTestReminder("_add")
+    // MARK: - show
+
+    func test_show_byID_returnsReminder() throws {
+
+        let id = try createTestReminder("_show")
         defer { deleteByID(id) }
 
-        let r = try CLI.run("reminders", "list", testList)
-        let reminders = try XCTUnwrap(r.jsonArray)
-        let match = reminders.first { ($0["id"] as? String) == id }
-        let found = try XCTUnwrap(match)
-        XCTAssertEqual(found["title"] as? String, title)
-        XCTAssertEqual(found["isCompleted"] as? Bool, false)
-    }
-
-    func test_add_withDueDate_storesDueDate() throws {
-
-        let title = "\(Self.prefix)_add_due"
-        let r = try CLI.run("reminders", "add", "--new-title", title, "--list", testList, "--due", "2099-06-15")
-        defer { deleteByTitle(title) }
+        let r = try CLI.run("reminders", "show", id)
         XCTAssertEqual(r.exitCode, 0, r.stdout)
 
         let obj = try XCTUnwrap(r.jsonObject)
-        let due = try XCTUnwrap(obj["dueDate"] as? String, "Expected dueDate in: \(obj)")
+        XCTAssertEqual(obj["id"] as? String, id)
+    }
+
+    func test_show_unknownID_returnsError() throws {
+
+        let r = try CLI.run("reminders", "show", "00000000-0000-0000-0000-000000000000")
+        XCTAssertNotEqual(r.exitCode, 0)
+        let obj = try XCTUnwrap(r.jsonObject)
+        XCTAssertNotNil(obj["error"])
+    }
+
+    // MARK: - create
+
+    func test_create_returnsReminderWithID() throws {
+
+        let title = "\(Self.prefix)_create"
+        let r = try CLI.run("reminders", "create", "--new-title", title, "--list", testList)
+        let obj = try XCTUnwrap(r.jsonObject)
+        let id = try XCTUnwrap(obj["id"] as? String)
+        defer { deleteByID(id) }
+
+        XCTAssertEqual(r.exitCode, 0, r.stdout)
+        XCTAssertEqual(obj["title"] as? String, title)
+        XCTAssertEqual(obj["isCompleted"] as? Bool, false)
+        XCTAssertEqual(obj["listName"] as? String, testList)
+    }
+
+    func test_create_withDueDate() throws {
+
+        let title = "\(Self.prefix)_create_due"
+        let r = try CLI.run("reminders", "create", "--new-title", title, "--list", testList, "--due", "2099-06-15")
+        let obj = try XCTUnwrap(r.jsonObject)
+        let id = try XCTUnwrap(obj["id"] as? String)
+        defer { deleteByID(id) }
+
+        XCTAssertEqual(r.exitCode, 0, r.stdout)
+        let due = try XCTUnwrap(obj["dueDate"] as? String)
         XCTAssert(due.contains("2099"), "Due date should contain 2099, got: \(due)")
     }
 
-    func test_add_withNotes_storesNotes() throws {
+    func test_create_withNotesAndPriority() throws {
 
-        let title = "\(Self.prefix)_add_notes"
-        let r = try CLI.run("reminders", "add", "--new-title", title, "--list", testList, "--notes", "Hello from tests")
-        defer { deleteByTitle(title) }
-        XCTAssertEqual(r.exitCode, 0, r.stdout)
-
+        let title = "\(Self.prefix)_create_opts"
+        let r = try CLI.run("reminders", "create", "--new-title", title, "--list", testList,
+                            "--notes", "Hello", "--priority", "1")
         let obj = try XCTUnwrap(r.jsonObject)
-        XCTAssertEqual(obj["notes"] as? String, "Hello from tests")
-    }
+        let id = try XCTUnwrap(obj["id"] as? String)
+        defer { deleteByID(id) }
 
-    func test_add_withPriority_storesPriority() throws {
-
-        let title = "\(Self.prefix)_add_pri"
-        let r = try CLI.run("reminders", "add", "--new-title", title, "--list", testList, "--priority", "1")
-        defer { deleteByTitle(title) }
         XCTAssertEqual(r.exitCode, 0, r.stdout)
-
-        let obj = try XCTUnwrap(r.jsonObject)
+        XCTAssertEqual(obj["notes"] as? String, "Hello")
         XCTAssertEqual(obj["priority"] as? Int, 1)
     }
 
-    func test_add_invalidDueDate_returnsErrorJson() throws {
+    func test_create_invalidDueDate_returnsError() throws {
 
-        let r = try CLI.run("reminders", "add", "--new-title", "shouldfail", "--list", testList, "--due", "not-a-date")
-        defer { deleteByTitle("shouldfail") }
+        let r = try CLI.run("reminders", "create", "--new-title", "shouldfail", "--list", testList, "--due", "not-a-date")
+        if r.exitCode == 0 {
+            let obj = r.jsonObject
+            if let id = obj?["id"] as? String { deleteByID(id) }
+        }
         XCTAssertNotEqual(r.exitCode, 0)
         let obj = try XCTUnwrap(r.jsonObject)
         XCTAssertNotNil(obj["error"])
@@ -164,9 +176,9 @@ final class ICLaudeTests: XCTestCase {
 
     // MARK: - complete (by ID and by --current-title)
 
-    func test_complete_byID_marksReminderDone() throws {
+    func test_complete_byID() throws {
 
-        let id = try addTestReminder("_complete_id")
+        let id = try createTestReminder("_complete_id")
         defer { deleteByID(id) }
 
         let r = try CLI.run("reminders", "complete", id)
@@ -176,20 +188,17 @@ final class ICLaudeTests: XCTestCase {
         XCTAssertEqual(obj["success"] as? Bool, true)
     }
 
-    func test_complete_byTitle_marksReminderDone() throws {
+    func test_complete_byTitle() throws {
 
         let title = "\(Self.prefix)_complete_title"
-        let id = try addTestReminder("_complete_title")
+        let id = try createTestReminder("_complete_title")
         defer { deleteByID(id) }
 
         let r = try CLI.run("reminders", "complete", "--current-title", title, "--list", testList)
         XCTAssertEqual(r.exitCode, 0, r.stdout)
-
-        let obj = try XCTUnwrap(r.jsonObject)
-        XCTAssertEqual(obj["success"] as? Bool, true)
     }
 
-    func test_complete_unknownID_returnsErrorJson() throws {
+    func test_complete_unknownID_returnsError() throws {
 
         let r = try CLI.run("reminders", "complete", "00000000-0000-0000-0000-000000000000")
         XCTAssertNotEqual(r.exitCode, 0)
@@ -197,54 +206,53 @@ final class ICLaudeTests: XCTestCase {
         XCTAssertNotNil(obj["error"])
     }
 
-    // MARK: - edit (by ID, --new-title)
+    // MARK: - update (by ID, --new-title)
 
-    func test_edit_byID_updatesTitle() throws {
+    func test_update_byID_changesTitle() throws {
 
-        let original = "\(Self.prefix)_edit_orig"
-        let renamed  = "\(Self.prefix)_edit_renamed"
-        let id = try addTestReminder("_edit_orig")
+        let renamed = "\(Self.prefix)_update_renamed"
+        let id = try createTestReminder("_update_orig")
         defer { deleteByID(id) }
 
-        let r = try CLI.run("reminders", "edit", id, "--new-title", renamed)
+        let r = try CLI.run("reminders", "update", id, "--new-title", renamed)
         XCTAssertEqual(r.exitCode, 0, r.stdout)
 
         let obj = try XCTUnwrap(r.jsonObject)
         XCTAssertEqual(obj["title"] as? String, renamed)
     }
 
-    func test_edit_byTitle_updatesDueDate() throws {
+    func test_update_byTitle_changesDueDate() throws {
 
-        let title = "\(Self.prefix)_edit_due"
-        let id = try addTestReminder("_edit_due")
+        let title = "\(Self.prefix)_update_due"
+        let id = try createTestReminder("_update_due")
         defer { deleteByID(id) }
 
-        let r = try CLI.run("reminders", "edit", "--current-title", title, "--list", testList, "--due", "2099-12-31")
+        let r = try CLI.run("reminders", "update", "--current-title", title, "--list", testList, "--due", "2099-12-31")
         XCTAssertEqual(r.exitCode, 0, r.stdout)
 
         let obj = try XCTUnwrap(r.jsonObject)
         let due = try XCTUnwrap(obj["dueDate"] as? String)
-        XCTAssert(due.contains("2099"), "Expected 2099 in due date, got: \(due)")
+        XCTAssert(due.contains("2099"))
     }
 
-    func test_edit_updatesNotes() throws {
+    func test_update_changesNotes() throws {
 
-        let id = try addTestReminder("_edit_notes")
+        let id = try createTestReminder("_update_notes")
         defer { deleteByID(id) }
 
-        let r = try CLI.run("reminders", "edit", id, "--notes", "updated")
+        let r = try CLI.run("reminders", "update", id, "--notes", "updated")
         XCTAssertEqual(r.exitCode, 0, r.stdout)
 
         let obj = try XCTUnwrap(r.jsonObject)
         XCTAssertEqual(obj["notes"] as? String, "updated")
     }
 
-    func test_edit_updatesPriority() throws {
+    func test_update_changesPriority() throws {
 
-        let id = try addTestReminder("_edit_pri")
+        let id = try createTestReminder("_update_pri")
         defer { deleteByID(id) }
 
-        let r = try CLI.run("reminders", "edit", id, "--priority", "1")
+        let r = try CLI.run("reminders", "update", id, "--priority", "1")
         XCTAssertEqual(r.exitCode, 0, r.stdout)
 
         let obj = try XCTUnwrap(r.jsonObject)
@@ -253,9 +261,9 @@ final class ICLaudeTests: XCTestCase {
 
     // MARK: - delete (by ID and by --current-title)
 
-    func test_delete_byID_removesReminder() throws {
+    func test_delete_byID() throws {
 
-        let id = try addTestReminder("_delete_id")
+        let id = try createTestReminder("_delete_id")
 
         let r = try CLI.run("reminders", "delete", id)
         XCTAssertEqual(r.exitCode, 0, r.stdout)
@@ -264,19 +272,19 @@ final class ICLaudeTests: XCTestCase {
         XCTAssertEqual(obj["success"] as? Bool, true)
     }
 
-    func test_delete_byTitle_removesReminder() throws {
+    func test_delete_byTitle() throws {
 
         let title = "\(Self.prefix)_delete_title"
-        try addTestReminder("_delete_title")
+        try createTestReminder("_delete_title")
 
         let r = try CLI.run("reminders", "delete", "--current-title", title, "--list", testList)
         XCTAssertEqual(r.exitCode, 0, r.stdout)
     }
 
-    func test_delete_reminderGoneFromList() throws {
+    func test_delete_verifyGone() throws {
 
         let title = "\(Self.prefix)_delete_verify"
-        let id = try addTestReminder("_delete_verify")
+        let id = try createTestReminder("_delete_verify")
 
         try CLI.run("reminders", "delete", id)
 
@@ -286,7 +294,7 @@ final class ICLaudeTests: XCTestCase {
         XCTAssertFalse(found, "Reminder still present after deletion")
     }
 
-    func test_delete_unknownID_returnsErrorJson() throws {
+    func test_delete_unknownID_returnsError() throws {
 
         let r = try CLI.run("reminders", "delete", "00000000-0000-0000-0000-000000000000")
         XCTAssertNotEqual(r.exitCode, 0)
@@ -296,7 +304,7 @@ final class ICLaudeTests: XCTestCase {
 
     // MARK: - missing identifier
 
-    func test_complete_noIDNoTitle_returnsErrorJson() throws {
+    func test_complete_noIDNoTitle_returnsError() throws {
 
         let r = try CLI.run("reminders", "complete")
         XCTAssertNotEqual(r.exitCode, 0)

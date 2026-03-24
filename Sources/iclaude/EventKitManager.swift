@@ -49,9 +49,13 @@ final class EventKitManager {
     }
 
     func reminders(in calendar: EKCalendar) async throws -> [EKReminder] {
+        try await reminders(in: [calendar])
+    }
+
+    func reminders(in calendars: [EKCalendar]) async throws -> [EKReminder] {
 
         try await withCheckedThrowingContinuation { continuation in
-            let predicate = store.predicateForReminders(in: [calendar])
+            let predicate = store.predicateForReminders(in: calendars)
             store.fetchReminders(matching: predicate) { reminders in
                 continuation.resume(returning: reminders ?? [])
             }

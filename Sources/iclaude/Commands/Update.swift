@@ -1,10 +1,10 @@
 import ArgumentParser
 import Foundation
 
-struct Edit: AsyncParsableCommand {
+struct Update: AsyncParsableCommand {
 
     static let configuration = CommandConfiguration(
-        abstract: "Edit an existing reminder."
+        abstract: "Update an existing reminder."
     )
 
     @Argument(help: "Reminder ID.")

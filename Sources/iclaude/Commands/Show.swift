@@ -1,10 +1,13 @@
 import ArgumentParser
 
-struct Lists: AsyncParsableCommand {
+struct Show: AsyncParsableCommand {
 
     static let configuration = CommandConfiguration(
-        abstract: "List all reminder lists."
+        abstract: "Show a single reminder by ID."
     )
+
+    @Argument(help: "Reminder ID.")
+    var id: String
 
     @OptionGroup var global: GlobalOptions
 
@@ -13,8 +16,8 @@ struct Lists: AsyncParsableCommand {
         let ek = EventKitManager()
         do {
             try await ek.requestAccess()
-            let lists = ek.allLists().map { ReminderListInfo($0) }
-            print(try OutputFormatter.json(lists, pretty: global.pretty))
+            let reminder = try ek.reminder(withID: id)
+            print(try OutputFormatter.json(ReminderInfo(reminder), pretty: global.pretty))
         } catch {
             print(OutputFormatter.formatError(error, pretty: global.pretty))
             throw ExitCode.failure

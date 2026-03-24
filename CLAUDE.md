@@ -25,34 +25,36 @@ See: https://github.com/MarqueIV/selfauth
 
 ## Reminders Commands
 
-### List operations
+### Read operations
 
-| Command | Description |
-|---------|-------------|
-| `iclaude reminders lists` | List all reminder lists |
-| `iclaude reminders list <list-name>` | List reminders in a specific list |
+```
+iclaude reminders list                          # all lists
+iclaude reminders list <list-name>              # reminders in a specific list
+iclaude reminders list --all                    # all reminders across all lists
+iclaude reminders show <id>                     # single reminder by ID
+```
 
-### Reminder operations (ID-first, --current-title fallback)
+### Write operations (ID-first, --current-title fallback)
 
 All mutating commands take a reminder ID as the primary identifier. Use `--current-title`
 (with optional `--list` to narrow) as an alternative. If multiple reminders match a title,
 the response includes all matches with their IDs for disambiguation.
 
-| Command | Description |
-|---------|-------------|
-| `iclaude reminders add --new-title <title> --list <list> [--due <date>] [--notes <text>] [--priority <0-9>]` | Create a reminder |
-| `iclaude reminders complete <id>` | Mark as complete by ID |
-| `iclaude reminders complete --current-title <title> [--list <list>]` | Mark as complete by title |
-| `iclaude reminders delete <id>` | Delete by ID |
-| `iclaude reminders delete --current-title <title> [--list <list>]` | Delete by title |
-| `iclaude reminders edit <id> [--new-title <title>] [--due <date>] [--notes <text>] [--priority <0-9>]` | Edit by ID |
-| `iclaude reminders edit --current-title <title> [--list <list>] [--new-title <title>] [--due <date>] [--notes <text>] [--priority <0-9>]` | Edit by title |
+```
+iclaude reminders create --new-title <title> --list <list> [--due <date>] [--notes <text>] [--priority <0-9>]
+iclaude reminders update <id> [--new-title <title>] [--due <date>] [--notes <text>] [--priority <0-9>]
+iclaude reminders update --current-title <title> [--list <list>] [--new-title <title>] [--due <date>]
+iclaude reminders complete <id>
+iclaude reminders complete --current-title <title> [--list <list>]
+iclaude reminders delete <id>
+iclaude reminders delete --current-title <title> [--list <list>]
+```
 
 ## Output
 
 JSON by default. Add `--pretty` for pretty-printed JSON.
 
-- Success (read ops): JSON array of objects
+- Success (read ops): JSON array or object
 - Success (write ops): `{"success":true,"message":"..."}`
 - Error: `{"error":"message"}`
 - Disambiguation: `{"error":"Multiple reminders match...","matches":[...]}`
