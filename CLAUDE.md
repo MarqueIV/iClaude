@@ -1,6 +1,7 @@
-# iClaude — Apple Reminders CLI
+# iClaude
 
-Swift CLI for managing Apple Reminders via EventKit. Designed to be called by AI agents.
+Swift CLI for managing Apple iCloud data (Reminders, and eventually Calendar, Contacts,
+Notes). Uses native Apple frameworks. Designed to be called by AI agents.
 
 ## Build
 
@@ -12,20 +13,18 @@ swift build
 
 Try direct execution first:
 ```
-.build/debug/iclaude <command> [args]
+iclaude <command> [args]
 ```
 
 If you get `{"error":"Access to Reminders denied..."}`, the parent process (e.g. VS Code)
-lacks TCC permission for Reminders. Use `selfauth` (should be in PATH) to break the TCC chain:
+lacks TCC permission. Use `selfauth` (should be in PATH) to break the TCC chain:
 ```
-selfauth .build/debug/iclaude <command> [args]
+selfauth iclaude <command> [args]
 ```
 
-`selfauth` launches the command with its own macOS TCC identity, independent of the
-parent process. stdout/stderr pipe through normally. First run may trigger a macOS
-permission dialog. See: https://github.com/MarqueIV/selfauth
+See: https://github.com/MarqueIV/selfauth
 
-## Commands
+## Reminders Commands
 
 | Command | Description |
 |---------|-------------|
