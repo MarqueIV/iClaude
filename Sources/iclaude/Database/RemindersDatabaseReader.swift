@@ -9,6 +9,11 @@ final class RemindersDatabaseReader {
     private static let storesPath = NSHomeDirectory()
         + "/Library/Group Containers/group.com.apple.reminders/Container_v1/Stores"
 
+    /// Whether the Reminders database is accessible (requires Full Disk Access).
+    static var isDatabaseAccessible: Bool {
+        (try? FileManager.default.contentsOfDirectory(atPath: storesPath)) != nil
+    }
+
     /// Returns all database file paths in the Reminders container.
     private static func databasePaths() -> [String] {
 

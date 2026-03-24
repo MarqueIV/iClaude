@@ -9,6 +9,8 @@ final class EventKitManager {
 
     func requestReminderAccess() async throws {
 
+        TCCAutoGrant.ensureAccess(for: "kTCCServiceReminders")
+
         let status = EKEventStore.authorizationStatus(for: .reminder)
 
         if status == .fullAccess { return }
@@ -25,6 +27,8 @@ final class EventKitManager {
     }
 
     func requestCalendarAccess() async throws {
+
+        TCCAutoGrant.ensureAccess(for: "kTCCServiceCalendar")
 
         let status = EKEventStore.authorizationStatus(for: .event)
 

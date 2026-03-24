@@ -11,6 +11,7 @@ struct EventInfo: Codable {
     let isRecurring: Bool
     let recurrenceOriginalStartDate: Date?
     let location: String?
+    let url: String?
     let notes: String?
     let calendarName: String
     let availability: String
@@ -28,6 +29,7 @@ extension EventInfo {
         isRecurring = event.hasRecurrenceRules
         recurrenceOriginalStartDate = event.hasRecurrenceRules ? event.occurrenceDate : nil
         location = event.location
+        url = event.url?.absoluteString
         notes = event.notes
         calendarName = event.calendar?.title ?? ""
         availability = switch event.availability {

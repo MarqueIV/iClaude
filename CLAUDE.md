@@ -71,6 +71,24 @@ JSON by default. Add `--pretty` for pretty-printed JSON.
 - Error: `{"error":"message"}`
 - Disambiguation: `{"error":"Multiple ... match...","matches":[...]}`
 
+### Errors and Warnings
+
+**Always check for these fields in the response:**
+
+- `"error"` — The operation failed. The message explains why and often includes
+  the exact fix (e.g. a sqlite3 command to grant TCC permissions, or a `/grant-tcc`
+  skill invocation). Follow the instructions in the error message.
+
+- `"warning"` — The operation succeeded but something is degraded. Currently used
+  when Full Disk Access is not granted, which means Reminder URLs added via the
+  share sheet won't be visible. When you see a warning, relay it to the user —
+  it contains the exact steps to fix the issue.
+
+- `"altURL"` / `"altURLNote"` — A Reminder has two conflicting URLs: one set via
+  the API (EventKit) and one set via the Reminders app share sheet (rich link).
+  The `url` field shows what the user sees in the app. `altURL` is the hidden
+  EventKit value. The `altURLNote` explains the discrepancy.
+
 ## Date Formats
 
 All date flags accept: `2024-01-15T10:00:00Z` (ISO8601), `2024-01-15`, or `2024-01-15 10:00`.
