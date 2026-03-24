@@ -1,4 +1,5 @@
 import ArgumentParser
+import EventKit
 import Foundation
 
 struct CalendarDelete: AsyncParsableCommand {
@@ -17,6 +18,9 @@ struct CalendarDelete: AsyncParsableCommand {
     @Option(name: .long, help: "Calendar name (narrows search when using --current-title).")
     var calendar: String?
 
+    @Flag(name: .long, help: "Delete all future occurrences of a recurring event.")
+    var series: Bool = false
+
     @OptionGroup var global: GlobalOptions
 
     mutating func run() async throws {
@@ -29,11 +33,12 @@ struct CalendarDelete: AsyncParsableCommand {
                 from: nil, to: nil
             )
             let title = event.title ?? ""
-            try ek.remove(event)
-            print(OutputFormatter.success(
-                "Event '\(title)' deleted.",
-                pretty: global.pretty
-            ))
+            let span: EKSpan = series ? .futureEvents : .thisEvent
+            try ek.remove(event, span: span)
+            let msg = series
+                ? "Event '\(title)' and all future occurrences deleted."
+                : "Event '\(title)' deleted."
+            print(OutputFormatter.success(msg, pretty: global.pretty))
         } catch {
             print(OutputFormatter.formatError(error, pretty: global.pretty))
             throw ExitCode.failure

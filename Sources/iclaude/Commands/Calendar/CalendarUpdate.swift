@@ -33,6 +33,9 @@ struct CalendarUpdate: AsyncParsableCommand {
     @Option(name: .long, help: "New notes (replaces existing).")
     var notes: String?
 
+    @Flag(name: .long, help: "Apply changes to all future occurrences of a recurring event.")
+    var series: Bool = false
+
     @OptionGroup var global: GlobalOptions
 
     mutating func run() async throws {
@@ -59,7 +62,8 @@ struct CalendarUpdate: AsyncParsableCommand {
                 event.endDate = d
             }
 
-            try ek.save(event)
+            let span: EKSpan = series ? .futureEvents : .thisEvent
+            try ek.save(event, span: span)
             print(try OutputFormatter.json(EventInfo(event), pretty: global.pretty))
         } catch {
             print(OutputFormatter.formatError(error, pretty: global.pretty))
