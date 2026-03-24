@@ -22,6 +22,8 @@ final class EventKitManager {
         }
     }
 
+    // MARK: - Lists
+
     func allLists() -> [EKCalendar] {
         store.calendars(for: .reminder)
     }
@@ -36,6 +38,16 @@ final class EventKitManager {
         return calendar
     }
 
+    // MARK: - Reminder lookup
+
+    func reminder(withID id: String) throws -> EKReminder {
+
+        guard let item = store.calendarItem(withIdentifier: id) as? EKReminder else {
+            throw CLIError.reminderNotFoundByID(id)
+        }
+        return item
+    }
+
     func reminders(in calendar: EKCalendar) async throws -> [EKReminder] {
 
         try await withCheckedThrowingContinuation { continuation in
@@ -46,24 +58,52 @@ final class EventKitManager {
         }
     }
 
-    func reminder(titled title: String, in calendar: EKCalendar) async throws -> EKReminder {
+    /// Resolves a reminder by ID or by title. Returns exactly one match or throws.
+    /// When multiple reminders match a title, throws `.multipleRemindersFound`
+    /// with all matches so the caller can present them for disambiguation.
+    func resolveReminder(
+        id: String?,
+        currentTitle: String?,
+        listName: String?
+    ) async throws -> EKReminder {
 
-        let all = try await reminders(in: calendar)
-        let matches = all.filter { $0.title == title }
+        if let id {
+            return try reminder(withID: id)
+        }
+
+        guard let title = currentTitle else {
+            throw CLIError.missingIdentifier
+        }
+
+        let calendars: [EKCalendar]
+        if let listName {
+            calendars = [try list(named: listName)]
+        } else {
+            calendars = allLists()
+        }
+
+        let allReminders: [EKReminder] = try await withCheckedThrowingContinuation { continuation in
+            let predicate = store.predicateForReminders(in: calendars)
+            store.fetchReminders(matching: predicate) { reminders in
+                continuation.resume(returning: reminders ?? [])
+            }
+        }
+
+        let matches = allReminders.filter {
+            ($0.title ?? "").lowercased() == title.lowercased()
+        }
 
         switch matches.count {
         case 0:
-            throw CLIError.reminderNotFound(title, calendar.title)
+            throw CLIError.reminderNotFoundByTitle(title, listName)
         case 1:
             return matches[0]
         default:
-            // Prefer the first incomplete one; if all completed, error with count
-            if let incomplete = matches.first(where: { !$0.isCompleted }) {
-                return incomplete
-            }
-            throw CLIError.multipleRemindersFound(title, calendar.title, matches.count)
+            throw CLIError.multipleRemindersFound(title, matches.map { ReminderInfo($0) })
         }
     }
+
+    // MARK: - Mutations
 
     func newReminder(in calendar: EKCalendar) -> EKReminder {
 

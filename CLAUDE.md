@@ -13,27 +13,40 @@ swift build
 
 Try direct execution first:
 ```
-iclaude <command> [args]
+iclaude <module> <command> [args]
 ```
 
-If you get `{"error":"Access to Reminders denied..."}`, the parent process (e.g. VS Code)
-lacks TCC permission. Use `selfauth` (should be in PATH) to break the TCC chain:
+If you get `{"error":"Access to Reminders denied..."}`, use `selfauth` (should be in PATH):
 ```
-selfauth iclaude <command> [args]
+selfauth iclaude <module> <command> [args]
 ```
 
 See: https://github.com/MarqueIV/selfauth
 
 ## Reminders Commands
 
+### List operations
+
 | Command | Description |
 |---------|-------------|
-| `iclaude lists` | List all reminder lists |
-| `iclaude list <list-name>` | List reminders in a specific list |
-| `iclaude add <title> --list <list> [--due <date>] [--notes <text>] [--priority <0-9>]` | Create a reminder |
-| `iclaude complete <title> --list <list>` | Mark a reminder as complete |
-| `iclaude delete <title> --list <list>` | Delete a reminder |
-| `iclaude edit <title> --list <list> [--title <new>] [--due <date>] [--notes <text>] [--priority <0-9>]` | Edit a reminder |
+| `iclaude reminders lists` | List all reminder lists |
+| `iclaude reminders list <list-name>` | List reminders in a specific list |
+
+### Reminder operations (ID-first, --current-title fallback)
+
+All mutating commands take a reminder ID as the primary identifier. Use `--current-title`
+(with optional `--list` to narrow) as an alternative. If multiple reminders match a title,
+the response includes all matches with their IDs for disambiguation.
+
+| Command | Description |
+|---------|-------------|
+| `iclaude reminders add --new-title <title> --list <list> [--due <date>] [--notes <text>] [--priority <0-9>]` | Create a reminder |
+| `iclaude reminders complete <id>` | Mark as complete by ID |
+| `iclaude reminders complete --current-title <title> [--list <list>]` | Mark as complete by title |
+| `iclaude reminders delete <id>` | Delete by ID |
+| `iclaude reminders delete --current-title <title> [--list <list>]` | Delete by title |
+| `iclaude reminders edit <id> [--new-title <title>] [--due <date>] [--notes <text>] [--priority <0-9>]` | Edit by ID |
+| `iclaude reminders edit --current-title <title> [--list <list>] [--new-title <title>] [--due <date>] [--notes <text>] [--priority <0-9>]` | Edit by title |
 
 ## Output
 
@@ -42,6 +55,7 @@ JSON by default. Add `--pretty` for pretty-printed JSON.
 - Success (read ops): JSON array of objects
 - Success (write ops): `{"success":true,"message":"..."}`
 - Error: `{"error":"message"}`
+- Disambiguation: `{"error":"Multiple reminders match...","matches":[...]}`
 
 ## Date Formats
 

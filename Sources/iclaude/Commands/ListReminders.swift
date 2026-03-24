@@ -22,7 +22,7 @@ struct ListReminders: AsyncParsableCommand {
             let output = reminders.map { ReminderInfo($0) }
             print(try OutputFormatter.json(output, pretty: global.pretty))
         } catch {
-            print(OutputFormatter.error(error.localizedDescription, pretty: global.pretty))
+            print(OutputFormatter.formatError(error, pretty: global.pretty))
             throw ExitCode.failure
         }
     }

@@ -16,7 +16,7 @@ struct Lists: AsyncParsableCommand {
             let lists = ek.allLists().map { ReminderListInfo($0) }
             print(try OutputFormatter.json(lists, pretty: global.pretty))
         } catch {
-            print(OutputFormatter.error(error.localizedDescription, pretty: global.pretty))
+            print(OutputFormatter.formatError(error, pretty: global.pretty))
             throw ExitCode.failure
         }
     }

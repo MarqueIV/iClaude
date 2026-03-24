@@ -6,11 +6,14 @@ struct Complete: AsyncParsableCommand {
         abstract: "Mark a reminder as complete."
     )
 
-    @Argument(help: "Title of the reminder to complete.")
-    var title: String
+    @Argument(help: "Reminder ID.")
+    var id: String?
 
-    @Option(name: .long, help: "Name of the reminder list.")
-    var list: String
+    @Option(name: .customLong("current-title"), help: "Find by title instead of ID.")
+    var currentTitle: String?
+
+    @Option(name: .long, help: "List name (narrows search when using --current-title).")
+    var list: String?
 
     @OptionGroup var global: GlobalOptions
 
@@ -19,13 +22,17 @@ struct Complete: AsyncParsableCommand {
         let ek = EventKitManager()
         do {
             try await ek.requestAccess()
-            let calendar = try ek.list(named: list)
-            let reminder = try await ek.reminder(titled: title, in: calendar)
+            let reminder = try await ek.resolveReminder(
+                id: id, currentTitle: currentTitle, listName: list
+            )
             reminder.isCompleted = true
             try ek.save(reminder)
-            print(OutputFormatter.success("Reminder '\(title)' marked complete.", pretty: global.pretty))
+            print(OutputFormatter.success(
+                "Reminder '\(reminder.title ?? "")' marked complete.",
+                pretty: global.pretty
+            ))
         } catch {
-            print(OutputFormatter.error(error.localizedDescription, pretty: global.pretty))
+            print(OutputFormatter.formatError(error, pretty: global.pretty))
             throw ExitCode.failure
         }
     }

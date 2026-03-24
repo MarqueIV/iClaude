@@ -5,14 +5,9 @@ struct IClaude: AsyncParsableCommand {
 
     static let configuration = CommandConfiguration(
         commandName: "iclaude",
-        abstract: "Manage Apple Reminders from the command line.",
+        abstract: "Manage Apple iCloud data from the command line.",
         subcommands: [
-            Lists.self,
-            ListReminders.self,
-            Add.self,
-            Complete.self,
-            Delete.self,
-            Edit.self,
+            Reminders.self,
         ]
     )
 }

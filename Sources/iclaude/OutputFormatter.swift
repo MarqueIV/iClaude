@@ -41,4 +41,26 @@ enum OutputFormatter {
         return (try? json(OkPayload(success: true, message: message), pretty: false))
             ?? #"{"success":true}"#
     }
+
+    /// Formats any error for output. Handles disambiguation (multiple matches)
+    /// by including the full match list in the JSON so the caller can retry with an ID.
+    static func formatError(_ error: Error, pretty: Bool) -> String {
+
+        if case .multipleRemindersFound(let title, let matches) = error as? CLIError {
+            struct Payload: Encodable {
+
+                let error: String
+                let matches: [ReminderInfo]
+            }
+            let payload = Payload(
+                error: "Multiple reminders match '\(title)'. Use the id from one of the matches below.",
+                matches: matches
+            )
+            return (try? json(payload, pretty: pretty))
+                ?? Self.error("Multiple reminders match '\(title)'.", pretty: pretty)
+        }
+
+        let message = (error as? CLIError)?.errorDescription ?? error.localizedDescription
+        return Self.error(message, pretty: pretty)
+    }
 }

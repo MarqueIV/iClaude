@@ -7,14 +7,17 @@ struct Edit: AsyncParsableCommand {
         abstract: "Edit an existing reminder."
     )
 
-    @Argument(help: "Current title of the reminder to edit.")
-    var currentTitle: String
+    @Argument(help: "Reminder ID.")
+    var id: String?
 
-    @Option(name: .long, help: "Name of the reminder list.")
-    var list: String
+    @Option(name: .customLong("current-title"), help: "Find by title instead of ID.")
+    var currentTitle: String?
 
-    @Option(name: .long, help: "New title.")
-    var title: String?
+    @Option(name: .long, help: "List name (narrows search when using --current-title).")
+    var list: String?
+
+    @Option(name: .customLong("new-title"), help: "New title for the reminder.")
+    var newTitle: String?
 
     @Option(name: .long, help: "New due date — ISO8601 or YYYY-MM-DD or \"YYYY-MM-DD HH:MM\".")
     var due: String?
@@ -32,10 +35,11 @@ struct Edit: AsyncParsableCommand {
         let ek = EventKitManager()
         do {
             try await ek.requestAccess()
-            let calendar = try ek.list(named: list)
-            let reminder = try await ek.reminder(titled: currentTitle, in: calendar)
+            let reminder = try await ek.resolveReminder(
+                id: id, currentTitle: currentTitle, listName: list
+            )
 
-            if let title { reminder.title = title }
+            if let newTitle { reminder.title = newTitle }
             if let notes { reminder.notes = notes }
             if let priority { reminder.priority = priority }
 
@@ -52,7 +56,7 @@ struct Edit: AsyncParsableCommand {
             try ek.save(reminder)
             print(try OutputFormatter.json(ReminderInfo(reminder), pretty: global.pretty))
         } catch {
-            print(OutputFormatter.error(error.localizedDescription, pretty: global.pretty))
+            print(OutputFormatter.formatError(error, pretty: global.pretty))
             throw ExitCode.failure
         }
     }

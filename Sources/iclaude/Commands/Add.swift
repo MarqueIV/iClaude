@@ -7,8 +7,8 @@ struct Add: AsyncParsableCommand {
         abstract: "Create a new reminder."
     )
 
-    @Argument(help: "Title of the new reminder.")
-    var title: String
+    @Option(name: .customLong("new-title"), help: "Title of the new reminder.")
+    var newTitle: String
 
     @Option(name: .long, help: "Name of the reminder list.")
     var list: String
@@ -32,7 +32,7 @@ struct Add: AsyncParsableCommand {
             let calendar = try ek.list(named: list)
             let reminder = ek.newReminder(in: calendar)
 
-            reminder.title = title
+            reminder.title = newTitle
             reminder.notes = notes
             reminder.priority = priority
 
@@ -49,7 +49,7 @@ struct Add: AsyncParsableCommand {
             try ek.save(reminder)
             print(try OutputFormatter.json(ReminderInfo(reminder), pretty: global.pretty))
         } catch {
-            print(OutputFormatter.error(error.localizedDescription, pretty: global.pretty))
+            print(OutputFormatter.formatError(error, pretty: global.pretty))
             throw ExitCode.failure
         }
     }
