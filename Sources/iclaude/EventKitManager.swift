@@ -167,10 +167,25 @@ final class EventKitManager {
         return event
     }
 
+    /// Fetches events in the given date range. EventKit silently returns empty results
+    /// for spans exceeding 4 years, so this automatically chunks wider ranges.
     func events(in calendars: [EKCalendar], from start: Date, to end: Date) -> [EKEvent] {
 
-        let predicate = store.predicateForEvents(withStart: start, end: end, calendars: calendars)
-        return store.events(matching: predicate)
+        let maxChunkYears = 4
+        var allEvents: [EKEvent] = []
+        var chunkStart = start
+
+        while chunkStart < end {
+            let chunkEnd = min(
+                Foundation.Calendar.current.date(byAdding: .year, value: maxChunkYears, to: chunkStart)!,
+                end
+            )
+            let predicate = store.predicateForEvents(withStart: chunkStart, end: chunkEnd, calendars: calendars)
+            allEvents.append(contentsOf: store.events(matching: predicate))
+            chunkStart = chunkEnd
+        }
+
+        return allEvents
     }
 
     /// Resolves an event by ID or by title within a date range.
