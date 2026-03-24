@@ -1,4 +1,5 @@
 import ArgumentParser
+import EventKit
 
 struct ListReminders: AsyncParsableCommand {
 
@@ -24,12 +25,12 @@ struct ListReminders: AsyncParsableCommand {
             if all {
                 let calendars = ek.allReminderLists()
                 let allReminders = try await ek.reminders(in: calendars)
-                let output = allReminders.map { ReminderInfo($0) }
+                let output = enrichWithURLs(allReminders)
                 print(try OutputFormatter.json(output, pretty: global.pretty))
             } else if let listName {
                 let calendar = try ek.reminderList(named: listName)
                 let reminders = try await ek.reminders(in: calendar)
-                let output = reminders.map { ReminderInfo($0) }
+                let output = enrichWithURLs(reminders)
                 print(try OutputFormatter.json(output, pretty: global.pretty))
             } else {
                 let lists = ek.allReminderLists().map { ReminderListInfo($0) }
@@ -39,5 +40,13 @@ struct ListReminders: AsyncParsableCommand {
             print(OutputFormatter.formatError(error, pretty: global.pretty))
             throw ExitCode.failure
         }
+    }
+
+    /// Batch-enriches reminders with URLs from the SQLite database.
+    private func enrichWithURLs(_ reminders: [EKReminder]) -> [ReminderInfo] {
+
+        let ids = reminders.map { $0.calendarItemIdentifier }
+        let urlMap = RemindersDatabaseReader.urls(forReminderIDs: ids)
+        return reminders.map { ReminderInfo($0, urlMap: urlMap) }
     }
 }
