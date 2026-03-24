@@ -8,6 +8,7 @@ struct IClaude: AsyncParsableCommand {
         abstract: "Manage Apple iCloud data from the command line.",
         subcommands: [
             Reminders.self,
+            CalendarGroup.self,
         ]
     )
 }

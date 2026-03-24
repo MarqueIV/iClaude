@@ -34,7 +34,7 @@ struct Update: AsyncParsableCommand {
 
         let ek = EventKitManager()
         do {
-            try await ek.requestAccess()
+            try await ek.requestReminderAccess()
             let reminder = try await ek.resolveReminder(
                 id: id, currentTitle: currentTitle, listName: list
             )

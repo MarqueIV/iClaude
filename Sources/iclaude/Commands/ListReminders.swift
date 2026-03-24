@@ -19,20 +19,20 @@ struct ListReminders: AsyncParsableCommand {
 
         let ek = EventKitManager()
         do {
-            try await ek.requestAccess()
+            try await ek.requestReminderAccess()
 
             if all {
-                let calendars = ek.allLists()
+                let calendars = ek.allReminderLists()
                 let allReminders = try await ek.reminders(in: calendars)
                 let output = allReminders.map { ReminderInfo($0) }
                 print(try OutputFormatter.json(output, pretty: global.pretty))
             } else if let listName {
-                let calendar = try ek.list(named: listName)
+                let calendar = try ek.reminderList(named: listName)
                 let reminders = try await ek.reminders(in: calendar)
                 let output = reminders.map { ReminderInfo($0) }
                 print(try OutputFormatter.json(output, pretty: global.pretty))
             } else {
-                let lists = ek.allLists().map { ReminderListInfo($0) }
+                let lists = ek.allReminderLists().map { ReminderListInfo($0) }
                 print(try OutputFormatter.json(lists, pretty: global.pretty))
             }
         } catch {

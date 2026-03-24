@@ -28,8 +28,8 @@ struct Create: AsyncParsableCommand {
 
         let ek = EventKitManager()
         do {
-            try await ek.requestAccess()
-            let calendar = try ek.list(named: list)
+            try await ek.requestReminderAccess()
+            let calendar = try ek.reminderList(named: list)
             let reminder = ek.newReminder(in: calendar)
 
             reminder.title = newTitle
